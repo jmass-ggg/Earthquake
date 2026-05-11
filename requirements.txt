@@ -56,3 +56,12 @@ watchfiles==1.1.0
 websockets==15.0.1
 PyJWT>=2.8,<3
 httpx==0.28.1
+fastapi
+uvicorn[standard]
+sqlalchemy
+psycopg2-binary
+python-dotenv
+pydantic
+email-validator
+passlib[bcrypt]
+python-jose[cryptography]

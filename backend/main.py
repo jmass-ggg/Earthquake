@@ -1,35 +1,47 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
+from fastapi import FastAPI
 
-import os
+from backend.api.auth import router as auth_router
+from backend.api.admin_alert_router import router as admin_alert_router
+from backend.api.websocket_router import router as websocket_router
 
-from dotenv import load_dotenv
-load_dotenv()
+from backend.core.seed import seed_admin
+from backend.database import Base, engine, SessionLocal
 
-DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL:
-    raise RuntimeError("Database is not set")
+from backend.model import (
+    User,
+    OTPVerification,
+    UserSession,
+    Admin,
+    EarthquakeAlert,
+    PushSubscription,
+    SOSAlert,
+    UserLocation,
+    Notification,
+)
 
-engine=create_engine(
-                    DATABASE_URL,
-                    pool_pre_ping=True,
-                    pool_size=10,
-                    echo=False,max_overflow=20,
-                    pool_timeout=30,
-                    pool_recycle=1800
-                    )
+Base.metadata.create_all(bind=engine)
+
+app = FastAPI(title="QuakeGuard API")
 
 
-SessionLocal=sessionmaker(autocommit=False,autoflush=False,bind=engine)
-Base=declarative_base()
+@app.on_event("startup")
+def startup_event():
+    db = SessionLocal()
 
-def get_db():
-    db=SessionLocal()
     try:
-        yield db
+        seed_admin(db)
     finally:
         db.close()
 
 
+app.include_router(auth_router)
+app.include_router(admin_alert_router)
+app.include_router(websocket_router)
 
+
+@app.get("/")
+def home():
+    return {
+        "message": "QuakeGuard API is running",
+        "database": "tables created successfully",
+    }
