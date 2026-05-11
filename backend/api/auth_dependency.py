@@ -26,7 +26,7 @@ def get_current_admin(
         )
 
         admin_id = payload.get("sub")
-        role = payload.get("role")
+        role = str(payload.get("role", "")).lower().strip()
         token_type = payload.get("type")
 
         if not admin_id:
@@ -69,7 +69,7 @@ def get_current_admin(
             detail="Admin does not exist",
         )
 
-    if admin.role != "admin":
+    if str(admin.role).lower().strip() != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required",

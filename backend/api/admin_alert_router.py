@@ -6,7 +6,9 @@ from backend.api.auth_dependency import get_current_admin
 from backend.database import get_db
 from backend.model.admin import Admin
 from backend.model.earthquake_alert import EarthquakeAlert
+from backend.model.push_subscription import PushSubscription
 from backend.service.websocket_manager import manager
+from backend.service.push_service import send_web_push
 
 router = APIRouter(
     prefix="/admin",
@@ -59,9 +61,36 @@ async def send_earthquake_alert(
         "magnitude": float(alert.magnitude),
         "risk_level": alert.risk_level,
         "emergency": True,
+        "open_url": "/emergency",
     }
 
     await manager.broadcast(websocket_payload)
+
+    push_payload = {
+        "type": "EARTHQUAKE_ALERT",
+        "title": alert.title,
+        "body": alert.message,
+        "message": alert.message,
+        "magnitude": float(alert.magnitude),
+        "risk_level": alert.risk_level,
+        "emergency": True,
+        "open_url": "/emergency",
+        "alarm": True,
+        "vibration": True,
+    }
+
+    subscriptions = db.query(PushSubscription).all()
+
+    sent_count = 0
+
+    for sub in subscriptions:
+        success = send_web_push(
+            subscription=sub.subscription_json,
+            payload=push_payload,
+        )
+
+        if success:
+            sent_count += 1
 
     return {
         "id": str(alert.id),

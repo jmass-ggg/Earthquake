@@ -20,7 +20,9 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def create_access_token(
     subject: str,
     role: str,
-    expires_delta: Optional[timedelta] = None
+    expires_delta: Optional[timedelta] = None,
+    email: Optional[str] = None,
+    phone_number: Optional[str] = None,
 ) -> str:
     if expires_delta is None:
         expires_delta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -28,15 +30,52 @@ def create_access_token(
     expire = datetime.utcnow() + expires_delta
 
     payload = {
-        "sub": subject,
-        "role": role,
+        "sub": str(subject),
+        "role": role.lower().strip(),
+        "type": "access",
         "exp": expire,
     }
 
-    token = jwt.encode(
+    if email:
+        payload["email"] = email
+
+    if phone_number:
+        payload["phone_number"] = phone_number
+
+    return jwt.encode(
         payload,
         settings.JWT_SECRET_KEY,
         algorithm=settings.JWT_ALGORITHM,
     )
 
-    return token
+
+def create_refresh_token(
+    subject: str,
+    role: str,
+    expires_delta: Optional[timedelta] = None,
+    email: Optional[str] = None,
+    phone_number: Optional[str] = None,
+) -> str:
+    if expires_delta is None:
+        expires_delta = timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+
+    expire = datetime.utcnow() + expires_delta
+
+    payload = {
+        "sub": str(subject),
+        "role": role.lower().strip(),
+        "type": "refresh",
+        "exp": expire,
+    }
+
+    if email:
+        payload["email"] = email
+
+    if phone_number:
+        payload["phone_number"] = phone_number
+
+    return jwt.encode(
+        payload,
+        settings.JWT_SECRET_KEY,
+        algorithm=settings.JWT_ALGORITHM,
+    )

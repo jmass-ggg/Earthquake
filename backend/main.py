@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from backend.api.auth import router as auth_router
 from backend.api.admin_alert_router import router as admin_alert_router
 from backend.api.websocket_router import router as websocket_router
-
+from backend.api.push_router import router as push_router
 from backend.core.seed import seed_admin
 from backend.database import Base, engine, SessionLocal
 
@@ -33,7 +33,7 @@ def startup_event():
     finally:
         db.close()
 
-
+app.include_router(push_router)
 app.include_router(auth_router)
 app.include_router(admin_alert_router)
 app.include_router(websocket_router)

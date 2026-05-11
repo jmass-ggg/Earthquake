@@ -17,7 +17,11 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     last_active = Column(DateTime, nullable=True)
 
-    sessions = relationship("UserSession", back_populates="user")
+    sessions = relationship(
+        "UserSession",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
     push_subscriptions = relationship("PushSubscription", back_populates="user")
     sos_alerts = relationship("SOSAlert", back_populates="user")
     locations = relationship("UserLocation", back_populates="user")

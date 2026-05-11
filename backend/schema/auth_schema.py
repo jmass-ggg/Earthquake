@@ -1,8 +1,7 @@
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 
 
 class OTPRequest(BaseModel):
@@ -19,15 +18,13 @@ class OTPRequestResponse(BaseModel):
 class OTPVerifyRequest(BaseModel):
     phone_number: str
     otp_code: str
-    device_id: Optional[str] = None
+    device_id: str
 
 
-class UserAuthResponse(BaseModel):
+class UserResponse(BaseModel):
     id: UUID
     phone_number: str
     is_verified: bool
-    created_at: datetime
-    last_active: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -35,20 +32,19 @@ class UserAuthResponse(BaseModel):
 
 class UserLoginResponse(BaseModel):
     access_token: str
-    token_type: str = "bearer"
-    user: UserAuthResponse
-
+    refresh_token: str
+    token_type: str
+    user: UserResponse
 
 class AdminLoginRequest(BaseModel):
-    email: EmailStr
+    email: str
     password: str
 
 
-class AdminAuthResponse(BaseModel):
+class AdminResponse(BaseModel):
     id: UUID
-    email: EmailStr
+    email: str
     role: str
-    created_at: datetime
 
     class Config:
         from_attributes = True
@@ -56,5 +52,15 @@ class AdminAuthResponse(BaseModel):
 
 class AdminLoginResponse(BaseModel):
     access_token: str
-    token_type: str = "bearer"
-    admin: AdminAuthResponse
+    refresh_token: str
+    token_type: str
+    admin: AdminResponse
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
+
+class RefreshTokenResponse(BaseModel):
+    access_token: str
+    token_type: str
