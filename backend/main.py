@@ -4,8 +4,15 @@ from backend.api.auth import router as auth_router
 from backend.api.admin_alert_router import router as admin_alert_router
 from backend.api.websocket_router import router as websocket_router
 from backend.api.push_router import router as push_router
+from backend.api.emergency_response_router import router as emergency_response_router
+
 from backend.core.seed import seed_admin
 from backend.database import Base, engine, SessionLocal
+
+from backend.service.alert_reminder_scheduler import (
+    start_alert_reminder_scheduler,
+    stop_alert_reminder_scheduler,
+)
 
 from backend.model import (
     User,
@@ -19,6 +26,8 @@ from backend.model import (
     Notification,
 )
 
+from backend.model.emergency_response import EmergencyResponse
+
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="QuakeGuard API")
@@ -30,13 +39,21 @@ def startup_event():
 
     try:
         seed_admin(db)
+        start_alert_reminder_scheduler()
     finally:
         db.close()
 
-app.include_router(push_router)
+
+@app.on_event("shutdown")
+def shutdown_event():
+    stop_alert_reminder_scheduler()
+
+
 app.include_router(auth_router)
+app.include_router(push_router)
 app.include_router(admin_alert_router)
 app.include_router(websocket_router)
+app.include_router(emergency_response_router)
 
 
 @app.get("/")

@@ -9,6 +9,7 @@ from backend.model.earthquake_alert import EarthquakeAlert
 from backend.model.push_subscription import PushSubscription
 from backend.service.websocket_manager import manager
 from backend.service.push_service import send_web_push
+from backend.service.alert_reminder_scheduler import schedule_hourly_alert_reminder
 
 router = APIRouter(
     prefix="/admin",
@@ -56,18 +57,24 @@ async def send_earthquake_alert(
 
     websocket_payload = {
         "type": "EARTHQUAKE_ALERT",
+        "alert_id": str(alert.id),
         "title": alert.title,
         "message": alert.message,
         "magnitude": float(alert.magnitude),
         "risk_level": alert.risk_level,
         "emergency": True,
         "open_url": "/emergency",
+        "alarm": True,
+        "vibration": True,
+        "requires_response": True,
+        "response_options": ["SAFE", "NEED_HELP"],
     }
 
     await manager.broadcast(websocket_payload)
 
     push_payload = {
         "type": "EARTHQUAKE_ALERT",
+        "alert_id": str(alert.id),
         "title": alert.title,
         "body": alert.message,
         "message": alert.message,
@@ -77,6 +84,8 @@ async def send_earthquake_alert(
         "open_url": "/emergency",
         "alarm": True,
         "vibration": True,
+        "requires_response": True,
+        "response_options": ["SAFE", "NEED_HELP"],
     }
 
     subscriptions = db.query(PushSubscription).all()
@@ -91,6 +100,10 @@ async def send_earthquake_alert(
 
         if success:
             sent_count += 1
+
+    # This starts the 1-hour repeated alarm reminder.
+    # It will send again every 1 hour until the user responds SAFE.
+    schedule_hourly_alert_reminder(str(alert.id))
 
     return {
         "id": str(alert.id),
