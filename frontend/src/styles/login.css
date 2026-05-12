@@ -1,0 +1,122 @@
+.login-page {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 1rem;
+}
+
+.login-card {
+  width: min(100%, 430px);
+  padding: 1.5rem;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(12px);
+}
+.otp-expiry {
+  margin: -0.3rem 0 0;
+  color: var(--color-muted);
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.brand-mark {
+  display: grid;
+  width: 68px;
+  height: 68px;
+  margin: 0 auto 1rem;
+  place-items: center;
+  border-radius: 22px;
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--color-primary), #450a0a);
+  font-size: 1.2rem;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  box-shadow: 0 20px 35px rgba(185, 28, 28, 0.28);
+}
+
+.login-card h1 {
+  margin-bottom: 0.35rem;
+  text-align: center;
+  font-size: clamp(2rem, 8vw, 2.7rem);
+  letter-spacing: -0.06em;
+}
+
+.login-subtitle {
+  margin-bottom: 1.7rem;
+  color: var(--color-muted);
+  text-align: center;
+  font-weight: 600;
+}
+
+.login-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.login-form label {
+  color: #334155;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.login-form input {
+  width: 100%;
+  min-height: 54px;
+  padding: 0 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 15px;
+  background: #ffffff;
+  color: var(--color-text);
+  outline: none;
+  transition:
+    border 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.login-form input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px rgba(185, 28, 28, 0.12);
+}
+
+.otp-section {
+  display: grid;
+  gap: 1rem;
+  animation: slideIn 0.25s ease both;
+}
+
+.development-otp {
+  padding: 0.9rem 1rem;
+  border: 1px dashed rgba(185, 28, 28, 0.45);
+  border-radius: 14px;
+  color: #7f1d1d;
+  background: #fff1f2;
+  text-align: center;
+  font-weight: 700;
+}
+
+.login-note {
+  margin: 1.4rem 0 0;
+  color: var(--color-muted);
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (min-width: 640px) {
+  .login-card {
+    padding: 2rem;
+  }
+}
