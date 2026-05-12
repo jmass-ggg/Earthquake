@@ -2,6 +2,8 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App.jsx";
 
+import { EmergencyProvider } from "./context/EmergencyContext.jsx";
+
 import "./styles/global.css";
 import "./styles/components.css";
 import "./styles/login.css";
@@ -20,6 +22,8 @@ if ("serviceWorker" in navigator) {
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <App />
+    <EmergencyProvider>
+      <App />
+    </EmergencyProvider>
   </React.StrictMode>
 );

@@ -1,237 +1,789 @@
-.dashboard-page {
+.dashboard {
   width: min(1180px, 100%);
   min-height: 100vh;
   margin: 0 auto;
   padding: 1rem;
+  transition:
+    background 0.35s ease,
+    color 0.35s ease;
 }
 
-.dashboard-header {
+.dashboard.normal-mode {
+  color: #0f172a;
+}
+
+.dashboard.emergency-mode {
+  color: #ffffff;
+}
+
+/* =========================
+   TOP STATUS BAR
+========================= */
+
+.dashboard-status-bar {
+  margin-bottom: 1.2rem;
+}
+
+.status-bar-content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.2rem;
+  border-radius: 28px;
+  box-shadow: var(--shadow-soft);
+  transition:
+    transform 0.25s ease,
+    border 0.25s ease,
+    background 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.status-bar-content.normal {
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  background:
+    linear-gradient(135deg, rgba(240, 253, 244, 0.98), rgba(239, 246, 255, 0.96)),
+    #ffffff;
+}
+
+.status-bar-content.emergency {
+  border: 1px solid rgba(248, 113, 113, 0.55);
+  background:
+    linear-gradient(135deg, rgba(127, 29, 29, 0.98), rgba(69, 10, 10, 0.96)),
+    #7f1d1d;
+  box-shadow:
+    0 24px 60px rgba(127, 29, 29, 0.35),
+    0 0 0 1px rgba(254, 202, 202, 0.15);
+  animation: emergencyGlow 1.5s ease-in-out infinite;
+}
+
+.status-dot {
   display: grid;
+  width: 54px;
+  height: 54px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 1.6rem;
+}
+
+.status-bar-content h1 {
+  margin: 0 0 0.2rem;
+  font-size: clamp(1.35rem, 5vw, 2.2rem);
+  letter-spacing: -0.05em;
+}
+
+.status-bar-content p {
+  margin: 0;
+  color: var(--color-muted);
+  font-weight: 700;
+}
+
+.status-bar-content.emergency p {
+  color: #fecaca;
+}
+
+/* =========================
+   MAIN DASHBOARD CARD
+========================= */
+
+.main-dashboard-card {
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 1.2rem;
+  padding: 1.35rem;
+  border-radius: 30px;
+  box-shadow: var(--shadow-card);
+  transition:
+    background 0.35s ease,
+    border 0.35s ease,
+    box-shadow 0.35s ease,
+    transform 0.35s ease;
+}
+
+.main-dashboard-card::before {
+  position: absolute;
+  inset: auto -6rem -8rem auto;
+  width: 18rem;
+  height: 18rem;
+  border-radius: 999px;
+  content: "";
+  opacity: 0.28;
+  pointer-events: none;
+}
+
+.main-dashboard-card.normal {
+  border: 1px solid rgba(186, 230, 253, 0.9);
+  background:
+    radial-gradient(circle at top right, rgba(34, 197, 94, 0.12), transparent 20rem),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(240, 249, 255, 0.94));
+}
+
+.main-dashboard-card.normal::before {
+  background: #22c55e;
+}
+
+.main-dashboard-card.emergency {
+  border: 2px solid rgba(248, 113, 113, 0.85);
+  background:
+    radial-gradient(circle at top right, rgba(248, 113, 113, 0.2), transparent 18rem),
+    linear-gradient(135deg, #7f1d1d, #1f0a0a);
+  box-shadow:
+    0 26px 70px rgba(127, 29, 29, 0.42),
+    0 0 0 4px rgba(248, 113, 113, 0.12);
+  animation: flashingBorder 1.3s ease-in-out infinite;
+}
+
+.main-dashboard-card.emergency::before {
+  background: #ef4444;
+}
+
+.dashboard-card-header {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 1rem;
   margin-bottom: 1.2rem;
-  padding: 1.3rem;
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  border-radius: 28px;
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: var(--shadow-soft);
 }
 
-.dashboard-header h1 {
+.dashboard-label {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.main-dashboard-card.emergency .dashboard-label,
+.dashboard.emergency-mode .dashboard-label {
+  color: #fecaca;
+}
+
+.risk-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 0.85rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.risk-badge.safe {
+  color: #14532d;
+  background: #dcfce7;
+}
+
+.risk-badge.high {
+  color: #7f1d1d;
+  background: #fecaca;
+  box-shadow: 0 0 0 6px rgba(254, 202, 202, 0.15);
+}
+
+.main-dashboard-card h2 {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 0.75rem;
+  font-size: clamp(2.3rem, 12vw, 5rem);
+  line-height: 0.95;
+  letter-spacing: -0.08em;
+}
+
+.dashboard-message {
+  position: relative;
+  z-index: 1;
+  max-width: 720px;
+  margin: 0;
+  color: var(--color-muted);
+  font-size: clamp(1rem, 4vw, 1.3rem);
+  font-weight: 700;
+  line-height: 1.55;
+}
+
+.main-dashboard-card.emergency .dashboard-message {
+  color: #ffffff;
+}
+
+.earthquake-details {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 0.85rem;
+  margin-top: 1.3rem;
+}
+
+.detail-box {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1rem;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(226, 232, 240, 0.85);
+}
+
+.main-dashboard-card.emergency .detail-box {
+  border-color: rgba(254, 202, 202, 0.18);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.detail-box span {
+  color: var(--color-muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.main-dashboard-card.emergency .detail-box span {
+  color: #fecaca;
+}
+
+.detail-box strong {
+  font-size: 1.5rem;
+}
+
+.main-dashboard-card.emergency .detail-box strong {
+  color: #ffffff;
+}
+
+/* =========================
+   EMERGENCY MODAL
+========================= */
+
+.emergency-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background:
+    radial-gradient(circle at top, rgba(248, 113, 113, 0.28), transparent 24rem),
+    rgba(2, 6, 23, 0.72);
+  backdrop-filter: blur(10px);
+}
+
+.emergency-modal {
+  width: min(100%, 520px);
+  padding: 1.3rem;
+  border: 2px solid rgba(254, 202, 202, 0.55);
+  border-radius: 30px;
+  color: #ffffff;
+  background:
+    linear-gradient(135deg, rgba(127, 29, 29, 0.98), rgba(69, 10, 10, 0.98)),
+    #7f1d1d;
+  box-shadow:
+    0 35px 90px rgba(0, 0, 0, 0.45),
+    0 0 0 8px rgba(248, 113, 113, 0.12);
+  text-align: center;
+  animation:
+    modalEnter 0.25s ease both,
+    modalShake 0.55s ease 0.25s both;
+}
+
+.modal-warning-icon {
   margin-bottom: 0.5rem;
-  font-size: clamp(2rem, 8vw, 3.4rem);
+  font-size: clamp(3rem, 14vw, 5rem);
+  line-height: 1;
+}
+
+.emergency-modal h2 {
+  margin-bottom: 0.75rem;
+  font-size: clamp(2rem, 9vw, 3.4rem);
+  line-height: 0.95;
   letter-spacing: -0.07em;
 }
 
-.dashboard-header p {
-  margin-bottom: 0;
-  color: var(--color-muted);
-  line-height: 1.6;
+.modal-message {
+  margin: 0 auto 1rem;
+  color: #fee2e2;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.55;
 }
 
-.eyebrow {
-  margin-bottom: 0.35rem;
-  color: var(--color-primary);
-  font-size: 0.8rem;
+.modal-alert-grid {
+  display: grid;
+  gap: 0.8rem;
+  margin: 1rem 0;
+}
+
+.modal-alert-grid div {
+  display: grid;
+  gap: 0.3rem;
+  padding: 1rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.13);
+}
+
+.modal-alert-grid span {
+  color: #fecaca;
+  font-size: 0.75rem;
   font-weight: 900;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
-.logout-button {
-  min-height: 48px;
-  padding: 0 1.1rem;
-  color: #334155;
-  background: #e2e8f0;
-}
-
-.dashboard-grid {
-  display: grid;
-  gap: 1rem;
-}
-
-.dashboard-card {
-  padding: 1.2rem;
-  border: 1px solid rgba(226, 232, 240, 0.95);
-  border-radius: 26px;
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow: var(--shadow-soft);
-}
-
-.dashboard-card h2 {
-  margin-bottom: 1rem;
-  font-size: 1.25rem;
-  letter-spacing: -0.03em;
-}
-
-.dashboard-card p {
-  color: var(--color-muted);
-  line-height: 1.6;
-}
-
-.card-icon {
-  display: grid;
-  width: 48px;
-  height: 48px;
-  margin-bottom: 0.9rem;
-  place-items: center;
-  border-radius: 18px;
-  background: #f1f5f9;
+.modal-alert-grid strong {
   font-size: 1.5rem;
 }
 
-.info-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.9rem 0;
-  border-bottom: 1px solid #f1f5f9;
+.emergency-modal h3 {
+  margin: 1.1rem 0;
+  color: #ffffff;
+  font-size: 1.25rem;
 }
 
-.info-row:last-child {
-  border-bottom: 0;
-}
-
-.info-row span {
-  color: var(--color-muted);
-  font-weight: 600;
-}
-
-.info-row strong {
-  text-align: right;
-}
-
-.status-text.safe {
-  color: var(--color-safe);
-}
-
-.permission-box {
-  display: grid;
-  gap: 0.45rem;
-  margin-bottom: 1rem;
-  padding: 1rem;
-  border-radius: 18px;
-  background: #f8fafc;
-}
-
-.permission-box span {
-  color: var(--color-muted);
-  font-size: 0.9rem;
-  font-weight: 700;
-}
-
-.permission-state {
-  text-transform: capitalize;
-}
-
-.permission-state.granted {
-  color: var(--color-safe);
-}
-
-.permission-state.denied {
-  color: var(--color-primary);
-}
-
-.permission-state.default {
-  color: #b45309;
-}
-
-.permission-state.unsupported {
-  color: #475569;
-}
-
-.connection-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.7rem;
-  margin-bottom: 1rem;
-  padding: 0.85rem 1rem;
-  border-radius: 999px;
-  background: #f8fafc;
-  text-transform: capitalize;
-}
-
-.connection-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 999px;
-  background: #94a3b8;
-}
-
-.connection-status.connected .connection-dot {
-  background: #22c55e;
-  box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.16);
-}
-
-.connection-status.disconnected .connection-dot {
-  background: #ef4444;
-  box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.14);
-}
-
-.connection-status.reconnecting .connection-dot {
-  background: #f59e0b;
-  box-shadow: 0 0 0 6px rgba(245, 158, 11, 0.16);
-}
-
-.action-button-group {
+.modal-actions {
   display: grid;
   gap: 0.8rem;
 }
 
-.demo-alert-panel {
-  display: grid;
-  gap: 1rem;
-  margin-top: 1rem;
-  padding: 1.3rem;
+.safe-action-button,
+.help-action-button {
+  min-height: 58px;
+  padding: 0 1rem;
+  border: 0;
+  border-radius: 18px;
+  font-weight: 900;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.safe-action-button:hover,
+.help-action-button:hover {
+  transform: translateY(-1px);
+}
+
+.safe-action-button {
+  color: #ffffff;
+  background: linear-gradient(135deg, #22c55e, #15803d);
+  box-shadow: 0 14px 28px rgba(21, 128, 61, 0.25);
+}
+
+.help-action-button {
+  color: #7f1d1d;
+  background: #ffffff;
+  box-shadow: 0 14px 28px rgba(255, 255, 255, 0.18);
+}
+
+/* =========================
+   EMERGENCY HELP PANEL
+========================= */
+
+.emergency-help-panel {
+  margin-bottom: 1.2rem;
+  padding: 1.2rem;
+  border: 1px solid rgba(248, 113, 113, 0.45);
   border-radius: 28px;
   color: #ffffff;
   background:
-    linear-gradient(135deg, rgba(127, 29, 29, 0.96), rgba(69, 10, 10, 0.96)),
-    radial-gradient(circle at top right, rgba(255, 255, 255, 0.18), transparent 15rem);
+    radial-gradient(circle at top right, rgba(248, 113, 113, 0.22), transparent 18rem),
+    linear-gradient(135deg, #1f2937, #020617);
   box-shadow: var(--shadow-card);
 }
 
-.demo-alert-panel h2 {
-  margin-bottom: 0.4rem;
+.help-panel-header h2 {
+  margin-bottom: 0.35rem;
+  font-size: clamp(1.5rem, 6vw, 2.3rem);
+  letter-spacing: -0.05em;
 }
 
-.demo-alert-panel p {
-  margin-bottom: 0;
-  color: rgba(255, 255, 255, 0.82);
-  line-height: 1.6;
+.help-panel-header p {
+  margin-bottom: 1rem;
+  color: #cbd5e1;
+  line-height: 1.55;
 }
 
-.demo-alert-button {
-  min-height: 58px;
-  padding: 0 1.3rem;
-  color: var(--color-primary-dark);
-  background: #ffffff;
+.emergency-contact-grid {
+  display: grid;
+  gap: 0.85rem;
 }
 
-@media (min-width: 760px) {
-  .dashboard-page {
-    padding: 2rem;
+.contact-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+  padding: 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.contact-card > span {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 1.45rem;
+}
+
+.contact-card h3 {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+}
+
+.contact-card p {
+  margin: 0.15rem 0;
+  color: #e2e8f0;
+  font-weight: 800;
+}
+
+.hospital-card {
+  border-color: rgba(34, 197, 94, 0.25);
+}
+
+.gps-status {
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 18px;
+  color: #ecfeff;
+  background: rgba(14, 165, 233, 0.16);
+  font-weight: 800;
+}
+
+.gps-status p {
+  margin: 0;
+}
+
+.gps-loading {
+  animation: gpsPulse 1s ease-in-out infinite;
+}
+
+/* =========================
+   BOTTOM CONTROLS
+========================= */
+
+.bottom-control-panel {
+  display: grid;
+  gap: 0.8rem;
+  margin-bottom: 1.2rem;
+  padding: 0.9rem;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(14px);
+}
+
+.simulate-earthquake-button,
+.resolve-alert-button {
+  min-height: 56px;
+  padding: 0 1rem;
+  border: 0;
+  border-radius: 16px;
+  font-weight: 900;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.simulate-earthquake-button:hover,
+.resolve-alert-button:hover {
+  transform: translateY(-1px);
+}
+
+.simulate-earthquake-button {
+  color: #ffffff;
+  background: linear-gradient(135deg, #ef4444, #7f1d1d);
+  box-shadow: 0 14px 28px rgba(185, 28, 28, 0.25);
+}
+
+.resolve-alert-button {
+  color: #14532d;
+  background: #dcfce7;
+  box-shadow: 0 14px 28px rgba(21, 128, 61, 0.16);
+}
+
+/* =========================
+   QUICK EMERGENCY CONTACTS
+========================= */
+
+.quick-emergency-contacts {
+  margin-top: 1.2rem;
+  margin-bottom: 2rem;
+  padding: 1.2rem;
+  border: 1px solid rgba(186, 230, 253, 0.9);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at top right, rgba(14, 165, 233, 0.12), transparent 18rem),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(240, 249, 255, 0.95));
+  box-shadow: var(--shadow-soft);
+}
+
+.dashboard.emergency-mode .quick-emergency-contacts {
+  border-color: rgba(248, 113, 113, 0.45);
+  background:
+    radial-gradient(circle at top right, rgba(248, 113, 113, 0.16), transparent 18rem),
+    linear-gradient(135deg, #1f2937, #020617);
+  box-shadow: var(--shadow-card);
+}
+
+.quick-contacts-header {
+  margin-bottom: 1rem;
+}
+
+.quick-contacts-header h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: clamp(1.5rem, 6vw, 2.2rem);
+  letter-spacing: -0.05em;
+}
+
+.dashboard.emergency-mode .quick-contacts-header h2 {
+  color: #ffffff;
+}
+
+.quick-contact-grid {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.quick-contact-card {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  min-height: 84px;
+  padding: 1rem;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 22px;
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.9);
+  text-decoration: none;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border 0.2s ease;
+}
+
+.quick-contact-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
+}
+
+.dashboard.emergency-mode .quick-contact-card {
+  border-color: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.quick-contact-icon {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 18px;
+  font-size: 1.6rem;
+}
+
+.quick-contact-card.ambulance .quick-contact-icon {
+  background: #dcfce7;
+}
+
+.quick-contact-card.police .quick-contact-icon {
+  background: #dbeafe;
+}
+
+.quick-contact-card.hospital .quick-contact-icon {
+  background: #fef3c7;
+}
+
+.dashboard.emergency-mode .quick-contact-card.ambulance .quick-contact-icon,
+.dashboard.emergency-mode .quick-contact-card.police .quick-contact-icon,
+.dashboard.emergency-mode .quick-contact-card.hospital .quick-contact-icon {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.quick-contact-card h3 {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+}
+
+.quick-contact-card p {
+  margin: 0;
+  color: #334155;
+  font-size: 1.15rem;
+  font-weight: 900;
+}
+
+.dashboard.emergency-mode .quick-contact-card p {
+  color: #e2e8f0;
+}
+
+.quick-contact-note {
+  margin: 1rem 0 0;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.dashboard.emergency-mode .quick-contact-note {
+  color: #cbd5e1;
+}
+
+/* =========================
+   ANIMATIONS
+========================= */
+
+@keyframes emergencyGlow {
+  0%,
+  100% {
+    box-shadow:
+      0 24px 60px rgba(127, 29, 29, 0.35),
+      0 0 0 1px rgba(254, 202, 202, 0.15);
   }
 
-  .dashboard-header {
-    grid-template-columns: 1fr auto;
-    align-items: center;
-    padding: 2rem;
+  50% {
+    box-shadow:
+      0 28px 75px rgba(239, 68, 68, 0.5),
+      0 0 0 8px rgba(254, 202, 202, 0.12);
+  }
+}
+
+@keyframes flashingBorder {
+  0%,
+  100% {
+    border-color: rgba(248, 113, 113, 0.8);
   }
 
-  .dashboard-grid {
+  50% {
+    border-color: rgba(254, 202, 202, 1);
+  }
+}
+
+@keyframes modalEnter {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes modalShake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  20% {
+    transform: translateX(-8px);
+  }
+
+  40% {
+    transform: translateX(8px);
+  }
+
+  60% {
+    transform: translateX(-5px);
+  }
+
+  80% {
+    transform: translateX(5px);
+  }
+}
+
+@keyframes gpsPulse {
+  0%,
+  100% {
+    opacity: 0.65;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+/* =========================
+   RESPONSIVE DESIGN
+========================= */
+
+@media (min-width: 640px) {
+  .dashboard {
+    padding: 1.5rem;
+  }
+
+  .status-bar-content,
+  .main-dashboard-card,
+  .emergency-help-panel,
+  .quick-emergency-contacts {
+    padding: 1.6rem;
+  }
+
+  .earthquake-details,
+  .modal-alert-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .demo-alert-panel {
-    grid-template-columns: 1fr auto;
-    align-items: center;
-    padding: 2rem;
+  .modal-actions,
+  .bottom-control-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .quick-contact-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (min-width: 1100px) {
-  .dashboard-grid {
+@media (min-width: 900px) {
+  .dashboard {
+    padding: 2rem;
+  }
+
+  .main-dashboard-card {
+    padding: 2.2rem;
+  }
+
+  .emergency-contact-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .bottom-control-panel {
+    width: min(720px, calc(100% - 2rem));
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+@media (min-width: 1050px) {
+  .quick-contact-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-bar-content.emergency,
+  .main-dashboard-card.emergency,
+  .emergency-modal,
+  .gps-loading {
+    animation: none;
+  }
+
+  .status-bar-content,
+  .main-dashboard-card,
+  .safe-action-button,
+  .help-action-button,
+  .simulate-earthquake-button,
+  .resolve-alert-button,
+  .quick-contact-card {
+    transition: none;
   }
 }
