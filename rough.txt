@@ -1,0 +1,44 @@
+Your backend Swagger safe daily status should be:
+
+{
+  "title": "Daily Safety Status",
+  "message": "No earthquake or disaster warning today.",
+  "alert_type": "daily_status",
+  "status": "safe",
+  "risk_level": "low",
+  "magnitude": null,
+  "emergency": false
+}
+
+This will show:
+
+System Safe
+No Earthquake Detected
+Daily Safety Status
+No earthquake or disaster warning today.
+
+Your backend disaster warning should be:
+
+{
+  "title": "Earthquake Warning",
+  "message": "Earthquake warning detected. Stay alert and move to a safe place.",
+  "alert_type": "earthquake",
+  "status": "warning",
+  "risk_level": "medium",
+  "magnitude": 5.5,
+  "emergency": true
+}
+
+This will show the warning modal.
+
+For higher danger:
+
+{
+  "title": "Evacuation Alert",
+  "message": "Critical earthquake risk. Evacuate immediately.",
+  "alert_type": "earthquake",
+  "status": "evacuate",
+  "risk_level": "critical",
+  "magnitude": 7.2,
+  "emergency": true
+}
