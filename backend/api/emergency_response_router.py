@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from backend.api.auth_dependency import get_current_user
 from backend.database import get_db
-from backend.model.earthquake_alert import EarthquakeAlert
+from backend.model.earthquake_alert import Alert
 from backend.model.emergency_response import EmergencyResponse
 from backend.model.user import User
 from backend.service.websocket_manager import manager

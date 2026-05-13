@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import { requestOtp, verifyOtp } from "../services/authApi.js";
 import {
   getOrCreateDeviceId,
-  isAuthenticated,
   saveAuthData
 } from "../utils/auth.js";
 
@@ -20,10 +19,6 @@ function Login() {
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-
-  if (isAuthenticated()) {
-    return <Navigate to="/dashboard" replace />;
-  }
 
   function resetMessages() {
     setSuccessMessage("");
@@ -116,7 +111,6 @@ function Login() {
       saveAuthData(loginData);
 
       setSuccessMessage("Login successful.");
-
       navigate("/dashboard", { replace: true });
     } catch (error) {
       setErrorMessage(error.message || "OTP verification failed.");

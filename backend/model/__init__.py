@@ -2,7 +2,7 @@ from backend.model.user import User
 from backend.model.otp_verification import OTPVerification
 from backend.model.user_session import UserSession
 from backend.model.admin import Admin
-from backend.model.earthquake_alert import EarthquakeAlert
+from backend.model.earthquake_alert import Alert
 from backend.model.push_subscription import PushSubscription
 from backend.model.sos_alert import SOSAlert
 from backend.model.user_location import UserLocation

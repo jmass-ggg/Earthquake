@@ -6,7 +6,7 @@ from backend.api.admin_alert_router import router as admin_alert_router
 from backend.api.websocket_router import router as websocket_router
 from backend.api.push_router import router as push_router
 from backend.api.emergency_response_router import router as emergency_response_router
-
+from backend.api.notification import router as notification
 from backend.core.seed import seed_admin
 from backend.database import Base, engine, SessionLocal
 
@@ -20,12 +20,14 @@ from backend.model import (
     OTPVerification,
     UserSession,
     Admin,
-    EarthquakeAlert,
+    Alert,
     PushSubscription,
     SOSAlert,
     UserLocation,
     Notification,
 )
+from fastapi import WebSocket, WebSocketDisconnect
+from backend.websocket.manager import manager
 
 from backend.model.emergency_response import EmergencyResponse
 
@@ -40,7 +42,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+@app.websocket("/ws/alerts")
+async def alerts_websocket(websocket: WebSocket):
+    await manager.connect(websocket)
 
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
 @app.on_event("startup")
 def startup_event():
     db = SessionLocal()
@@ -62,7 +72,7 @@ app.include_router(push_router)
 app.include_router(admin_alert_router)
 app.include_router(websocket_router)
 app.include_router(emergency_response_router)
-
+app.include_router(notification)
 
 @app.get("/")
 def home():

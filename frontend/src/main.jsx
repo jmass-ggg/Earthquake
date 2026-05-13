@@ -21,9 +21,7 @@ if ("serviceWorker" in navigator) {
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(
-  <React.StrictMode>
     <EmergencyProvider>
       <App />
     </EmergencyProvider>
-  </React.StrictMode>
 );

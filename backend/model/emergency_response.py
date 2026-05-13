@@ -14,7 +14,7 @@ class EmergencyResponse(Base):
 
     alert_id = Column(
         UUID(as_uuid=True),
-        ForeignKey("earthquake_alerts.id"),
+        ForeignKey("alerts.id"),
         nullable=False,
     )
 
@@ -25,7 +25,7 @@ class EmergencyResponse(Base):
     )
 
     response = Column(String(20), nullable=False)
-    # SAFE / NEED_HELP
+ 
 
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)

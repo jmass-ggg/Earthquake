@@ -5,7 +5,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
 from backend.database import SessionLocal
-from backend.model.earthquake_alert import EarthquakeAlert
+from backend.model.earthquake_alert import Alert
 from backend.model.emergency_response import EmergencyResponse
 from backend.model.push_subscription import PushSubscription
 from backend.service.push_service import send_web_push

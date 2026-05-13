@@ -1,5 +1,74 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useEmergencyContext } from "../context/EmergencyContext.jsx";
+import {
+  startEmergencyAlarm,
+  stopEmergencyAlarm
+} from "../services/emergencyAlarm.js";
+
+const ALERT_WS_URL = "ws://127.0.0.1:8000/ws/alerts";
+
+const STATUS_CONFIG = {
+  safe: {
+    label: "System Safe",
+    subtitle: "Daily Status: Safe",
+    eyebrow: "Current Safety Status",
+    icon: "🟢",
+    badge: "Safe",
+    titleFallback: "Daily Safety Status",
+    messageFallback: "No earthquake or disaster warning today."
+  },
+  warning: {
+    label: "Warning Active",
+    subtitle: "Medium Risk Detected",
+    eyebrow: "Current Alert Status",
+    icon: "🟠",
+    badge: "Warning",
+    titleFallback: "Disaster Warning",
+    messageFallback: "Disaster warning detected. Please stay alert."
+  },
+  danger: {
+    label: "Emergency Active",
+    subtitle: "High Risk Disaster Warning",
+    eyebrow: "Critical Alert Status",
+    icon: "🔴",
+    badge: "Emergency",
+    titleFallback: "Emergency Alert",
+    messageFallback: "Critical disaster warning. Move to a safe place immediately."
+  }
+};
+
+function getAlertMode(status, riskLevel, emergencyValue) {
+  const normalizedStatus = String(status || "safe").toLowerCase();
+  const normalizedRisk = String(riskLevel || "low").toLowerCase();
+
+  const isSafe =
+    normalizedStatus === "safe" &&
+    normalizedRisk === "low" &&
+    emergencyValue === false;
+
+  if (isSafe) return "safe";
+
+  if (normalizedStatus === "warning" || normalizedRisk === "medium") {
+    return "warning";
+  }
+
+  if (
+    emergencyValue === true ||
+    normalizedStatus === "danger" ||
+    normalizedStatus === "evacuate" ||
+    normalizedRisk === "high" ||
+    normalizedRisk === "very_high" ||
+    normalizedRisk === "critical"
+  ) {
+    return "danger";
+  }
+
+  return "safe";
+}
+
+function formatRiskLevel(value) {
+  return String(value || "LOW").replace("_", " ").toUpperCase();
+}
 
 function Dashboard() {
   const {
@@ -18,182 +87,331 @@ function Dashboard() {
   } = useEmergencyContext();
 
   const [showEmergencyModal, setShowEmergencyModal] = useState(false);
-  const [showHelpPanel, setShowHelpPanel] = useState(false);
-  const [gpsLoading, setGpsLoading] = useState(false);
+  const [wsConnected, setWsConnected] = useState(false);
+  const [alertMode, setAlertMode] = useState("safe");
+  const [alarmShouldPlay, setAlarmShouldPlay] = useState(false);
+  const [alarmNeedsTap, setAlarmNeedsTap] = useState(false);
 
-  const activeTitle = title || "Earthquake Alert";
-  const activeMessage = message || "Stay safe and avoid buildings.";
-  const activeMagnitude = magnitude || 6.8;
-  const activeRiskLevel = risk_level || "HIGH";
+  const config = STATUS_CONFIG[alertMode];
+
+  const hasMagnitude =
+    magnitude !== null &&
+    magnitude !== undefined &&
+    magnitude !== "";
+
+  const activeTitle = title || config.titleFallback;
+  const activeMessage = message || config.messageFallback;
+  const activeRiskLevel = formatRiskLevel(risk_level);
+
+  const statusSummary = useMemo(() => {
+    if (alertMode === "safe") {
+      return "No active emergency";
+    }
+
+    if (alertMode === "warning") {
+      return "Monitor closely";
+    }
+
+    return "Immediate attention required";
+  }, [alertMode]);
 
   useEffect(() => {
-    if (emergency) {
-      setShowEmergencyModal(true);
-      setShowHelpPanel(true);
-      startFakeGpsLoading();
-    } else {
-      setShowEmergencyModal(false);
-      setShowHelpPanel(false);
-      setGpsLoading(false);
-    }
-  }, [emergency]);
+    const ws = new WebSocket(ALERT_WS_URL);
 
-  useEffect(() => {
-    if (userStatus === "NEED_HELP") {
-      setShowHelpPanel(true);
-      startFakeGpsLoading();
-    }
-  }, [userStatus]);
-
-  function startFakeGpsLoading() {
-    setGpsLoading(true);
-
-    setTimeout(() => {
-      setGpsLoading(false);
-    }, 2500);
-  }
-
-  function simulateEarthquake() {
-    const mockEvent = {
-      title: "Earthquake Alert",
-      message: "Stay safe and avoid buildings.",
-      magnitude: 6.8,
-      risk_level: "HIGH",
-      emergency: true
+    ws.onopen = () => {
+      console.log("✅ WebSocket connected:", ALERT_WS_URL);
+      setWsConnected(true);
     };
 
-    setTitle(mockEvent.title);
-    setMessage(mockEvent.message);
-    setMagnitude(mockEvent.magnitude);
-    setRiskLevel(mockEvent.risk_level);
-    setEmergency(true);
-    setUserStatus("PENDING");
+    ws.onmessage = event => {
+      console.log("📩 Raw WebSocket message:", event.data);
 
-    setShowEmergencyModal(true);
-    setShowHelpPanel(true);
-    startFakeGpsLoading();
-  }
+      try {
+        const alertData = JSON.parse(event.data);
+        const backendEmergency = alertData.emergency === true;
 
-  function resolveAlert() {
-    setEmergency(false);
-    setUserStatus("SAFE");
-    setTitle("");
-    setMessage("");
-    setMagnitude(null);
-    setRiskLevel("SAFE");
+        const mode = getAlertMode(
+          alertData.status,
+          alertData.risk_level,
+          backendEmergency
+        );
 
-    setShowEmergencyModal(false);
-    setShowHelpPanel(false);
-    setGpsLoading(false);
+        setAlertMode(mode);
+
+        setTitle(
+          alertData.title ||
+            STATUS_CONFIG[mode].titleFallback
+        );
+
+        setMessage(
+          alertData.message ||
+            STATUS_CONFIG[mode].messageFallback
+        );
+
+        setMagnitude(alertData.magnitude ?? null);
+        setRiskLevel(formatRiskLevel(alertData.risk_level || "low"));
+
+        if (mode === "safe") {
+          setEmergency(false);
+          setUserStatus("SAFE");
+          setShowEmergencyModal(false);
+          setAlarmShouldPlay(false);
+        } else {
+          setEmergency(true);
+          setUserStatus("PENDING");
+          setShowEmergencyModal(true);
+          setAlarmShouldPlay(backendEmergency);
+        }
+      } catch (error) {
+        console.error("Invalid WebSocket JSON:", error);
+      }
+    };
+
+    ws.onerror = error => {
+      console.error("❌ WebSocket error:", error);
+      setWsConnected(false);
+    };
+
+    ws.onclose = () => {
+      console.log("❌ WebSocket disconnected");
+      setWsConnected(false);
+    };
+
+    return () => {
+      ws.close();
+      stopEmergencyAlarm();
+    };
+  }, [
+    setEmergency,
+    setMagnitude,
+    setMessage,
+    setRiskLevel,
+    setTitle,
+    setUserStatus
+  ]);
+
+  useEffect(() => {
+    async function controlAlarm() {
+      if (alarmShouldPlay) {
+        const result = await startEmergencyAlarm();
+
+        if (result?.autoplayBlocked) {
+          setAlarmNeedsTap(true);
+        } else {
+          setAlarmNeedsTap(false);
+        }
+      } else {
+        stopEmergencyAlarm();
+        setAlarmNeedsTap(false);
+      }
+    }
+
+    controlAlarm();
+  }, [alarmShouldPlay]);
+
+  async function handleStartAlarmTap() {
+    const result = await startEmergencyAlarm();
+
+    if (result?.success) {
+      setAlarmNeedsTap(false);
+    }
   }
 
   function handleSafeResponse() {
     setUserStatus("SAFE");
     setShowEmergencyModal(false);
+    setAlarmShouldPlay(false);
+    stopEmergencyAlarm();
   }
 
   function handleNeedHelpResponse() {
     setUserStatus("NEED_HELP");
     setShowEmergencyModal(false);
-    setShowHelpPanel(true);
-    startFakeGpsLoading();
+    setAlarmShouldPlay(false);
+    stopEmergencyAlarm();
   }
 
   return (
-    <main className={emergency ? "dashboard emergency-mode" : "dashboard normal-mode"}>
-      <header className="dashboard-status-bar">
-        {emergency ? (
-          <div className="status-bar-content emergency">
-            <span className="status-dot">🔴</span>
+    <main className={`dashboard dashboard--${alertMode}`}>
+      <section className="dashboard-shell">
+        <header className={`status-hero status-hero--${alertMode}`}>
+          <div className="status-hero__content">
+            <div className="status-hero__icon" aria-hidden="true">
+              {config.icon}
+            </div>
 
             <div>
-              <h1>Emergency Active</h1>
-              <p>Earthquake Alert Running</p>
+              <p className="status-hero__eyebrow">QuakeGuard Monitoring</p>
+              <h1>{config.label}</h1>
+              <p>{config.subtitle}</p>
             </div>
           </div>
-        ) : (
-          <div className="status-bar-content normal">
-            <span className="status-dot">🟢</span>
 
+          <div className="status-hero__meta">
+            <span className={`connection-pill ${wsConnected ? "is-online" : "is-offline"}`}>
+              <span />
+              {wsConnected ? "Live connected" : "Disconnected"}
+            </span>
+
+            <span className={`mode-pill mode-pill--${alertMode}`}>
+              {statusSummary}
+            </span>
+          </div>
+        </header>
+
+        <section className="dashboard-grid">
+          <article className={`alert-card alert-card--${alertMode}`}>
+            <div className="section-header">
+              <div>
+                <p className="section-kicker">{config.eyebrow}</p>
+                <h2>{alertMode === "safe" ? "Daily Status" : activeTitle}</h2>
+              </div>
+
+              <span className={`risk-badge risk-badge--${alertMode}`}>
+                {alertMode === "safe" ? "SAFE" : activeRiskLevel}
+              </span>
+            </div>
+
+            <p className="alert-card__message">{activeMessage}</p>
+
+            {alertMode !== "safe" && (
+              <div className="metric-grid">
+                {hasMagnitude && (
+                  <div className="metric-card">
+                    <span>Magnitude</span>
+                    <strong>{magnitude}</strong>
+                  </div>
+                )}
+
+                <div className="metric-card">
+                  <span>Risk Level</span>
+                  <strong>{activeRiskLevel}</strong>
+                </div>
+
+                <div className="metric-card">
+                  <span>User Status</span>
+                  <strong>{userStatus || "PENDING"}</strong>
+                </div>
+              </div>
+            )}
+          </article>
+
+          <aside className="side-panel">
+            <div className="mini-card">
+              <span className="mini-card__icon">📡</span>
+              <div>
+                <p>Alert Channel</p>
+                <strong>{wsConnected ? "Operational" : "Offline"}</strong>
+              </div>
+            </div>
+
+            <div className="mini-card">
+              <span className="mini-card__icon">🛡️</span>
+              <div>
+                <p>Current Mode</p>
+                <strong>{config.badge}</strong>
+              </div>
+            </div>
+
+            <div className="mini-card">
+              <span className="mini-card__icon">👤</span>
+              <div>
+                <p>User Response</p>
+                <strong>{userStatus || "SAFE"}</strong>
+              </div>
+            </div>
+          </aside>
+        </section>
+
+        <section className="contacts-panel">
+          <div className="section-header">
             <div>
-              <h1>System Safe</h1>
-              <p>No Earthquake Detected</p>
+              <p className="section-kicker">Emergency Contacts</p>
+              <h2>Nearby Help Numbers</h2>
             </div>
           </div>
-        )}
-      </header>
 
-      <section
-        className={
-          emergency
-            ? "main-dashboard-card emergency"
-            : "main-dashboard-card normal"
-        }
-      >
-        <div className="dashboard-card-header">
-          <p className="dashboard-label">Current Earthquake Status</p>
+          <div className="contact-grid">
+            <a href="tel:102" className="contact-card contact-card--ambulance">
+              <span>🚑</span>
+              <div>
+                <p>Ambulance</p>
+                <strong>102</strong>
+              </div>
+            </a>
 
-          <span className={emergency ? "risk-badge high" : "risk-badge safe"}>
-            {emergency ? activeRiskLevel : "SAFE"}
-          </span>
-        </div>
+            <a href="tel:100" className="contact-card contact-card--police">
+              <span>👮</span>
+              <div>
+                <p>Police</p>
+                <strong>100</strong>
+              </div>
+            </a>
 
-        <h2>{emergency ? "Emergency" : "Safe"}</h2>
+            <a href="tel:015522295" className="contact-card contact-card--hospital">
+              <span>🏥</span>
+              <div>
+                <p>Patan Hospital</p>
+                <strong>01-5522295</strong>
+              </div>
+            </a>
 
-        {!emergency && (
-          <p className="dashboard-message">
-            QuakeGuard is monitoring alerts. No earthquake has been detected.
+            <a href="tel:014221119" className="contact-card contact-card--hospital">
+              <span>🏥</span>
+              <div>
+                <p>Bir Hospital</p>
+                <strong>01-4221119</strong>
+              </div>
+            </a>
+          </div>
+
+          <p className="contacts-note">
+            Tap a card to call emergency services.
           </p>
-        )}
-
-        {emergency && (
-          <>
-            <p className="dashboard-message">{activeMessage}</p>
-
-            <div className="earthquake-details">
-              <div className="detail-box">
-                <span>Magnitude</span>
-                <strong>{activeMagnitude}</strong>
-              </div>
-
-              <div className="detail-box">
-                <span>Risk Level</span>
-                <strong>{activeRiskLevel}</strong>
-              </div>
-
-              <div className="detail-box">
-                <span>User Status</span>
-                <strong>{userStatus || "PENDING"}</strong>
-              </div>
-            </div>
-          </>
-        )}
+        </section>
       </section>
 
-      {showEmergencyModal && emergency && (
+      {showEmergencyModal && alertMode !== "safe" && emergency && (
         <section
           className="emergency-modal-backdrop"
           role="alertdialog"
           aria-modal="true"
         >
-          <div className="emergency-modal">
-            <div className="modal-warning-icon">⚠️</div>
+          <div className={`emergency-modal emergency-modal--${alertMode}`}>
+            <div className="modal-icon" aria-hidden="true">
+              {alertMode === "warning" ? "⚠️" : "🚨"}
+            </div>
+
+            <p className="section-kicker">
+              {alertMode === "warning" ? "Warning Alert" : "Emergency Alert"}
+            </p>
 
             <h2>{activeTitle}</h2>
-
             <p className="modal-message">{activeMessage}</p>
 
-            <div className="modal-alert-grid">
-              <div>
-                <span>Magnitude</span>
-                <strong>{activeMagnitude}</strong>
-              </div>
+            <div className="modal-metrics">
+              {hasMagnitude && (
+                <div>
+                  <span>Magnitude</span>
+                  <strong>{magnitude}</strong>
+                </div>
+              )}
 
               <div>
                 <span>Risk Level</span>
                 <strong>{activeRiskLevel}</strong>
               </div>
             </div>
+
+            {alarmNeedsTap && (
+              <button
+                type="button"
+                className="start-alarm-button"
+                onClick={handleStartAlarmTap}
+              >
+                🔊 Tap to Start Alarm
+              </button>
+            )}
 
             <h3>Are you safe right now?</h3>
 
@@ -203,7 +421,7 @@ function Dashboard() {
                 className="safe-action-button"
                 onClick={handleSafeResponse}
               >
-                🟢 Yes, I am Safe
+                I am Safe
               </button>
 
               <button
@@ -211,126 +429,12 @@ function Dashboard() {
                 className="help-action-button"
                 onClick={handleNeedHelpResponse}
               >
-                🔴 I Need Help
+                I Need Help
               </button>
             </div>
           </div>
         </section>
       )}
-
-      {(userStatus === "NEED_HELP" || emergency) && showHelpPanel && (
-        <section className="emergency-help-panel">
-          <div className="help-panel-header">
-            <h2>Emergency Help Panel</h2>
-            <p>Contact nearby emergency services immediately.</p>
-          </div>
-
-          <div className="emergency-contact-grid">
-            <article className="contact-card">
-              <span>🚑</span>
-
-              <div>
-                <h3>Ambulance</h3>
-                <p>102</p>
-              </div>
-            </article>
-
-            <article className="contact-card">
-              <span>👮</span>
-
-              <div>
-                <h3>Police</h3>
-                <p>100</p>
-              </div>
-            </article>
-
-            <article className="contact-card hospital-card">
-              <span>🏥</span>
-
-              <div>
-                <h3>Hospitals</h3>
-                <p>Patan Hospital</p>
-                <p>Bir Hospital</p>
-              </div>
-            </article>
-          </div>
-
-          <div className="gps-status">
-            {gpsLoading ? (
-              <p className="gps-loading">📍 Locating nearest hospital...</p>
-            ) : (
-              <p>📍 Nearest hospital location simulated.</p>
-            )}
-          </div>
-        </section>
-      )}
-
-      <section className="bottom-control-panel">
-        <button
-          type="button"
-          className="simulate-earthquake-button"
-          onClick={simulateEarthquake}
-        >
-          🚨 Simulate Earthquake
-        </button>
-
-        <button
-          type="button"
-          className="resolve-alert-button"
-          onClick={resolveAlert}
-        >
-          ✅ Resolve Alert
-        </button>
-      </section>
-
-      <section className="quick-emergency-contacts">
-        <div className="quick-contacts-header">
-          <p className="dashboard-label">Emergency Contacts</p>
-          <h2>Nearby Help Numbers</h2>
-        </div>
-
-        <div className="quick-contact-grid">
-          <a href="tel:102" className="quick-contact-card ambulance">
-            <span className="quick-contact-icon">🚑</span>
-
-            <div>
-              <h3>Ambulance</h3>
-              <p>102</p>
-            </div>
-          </a>
-
-          <a href="tel:100" className="quick-contact-card police">
-            <span className="quick-contact-icon">👮</span>
-
-            <div>
-              <h3>Police</h3>
-              <p>100</p>
-            </div>
-          </a>
-
-          <a href="tel:015522295" className="quick-contact-card hospital">
-            <span className="quick-contact-icon">🏥</span>
-
-            <div>
-              <h3>Patan Hospital</h3>
-              <p>01-5522295</p>
-            </div>
-          </a>
-
-          <a href="tel:014221119" className="quick-contact-card hospital">
-            <span className="quick-contact-icon">🏥</span>
-
-            <div>
-              <h3>Bir Hospital</h3>
-              <p>01-4221119</p>
-            </div>
-          </a>
-        </div>
-
-        <p className="quick-contact-note">
-          Tap a card to call emergency services. Replace hospital numbers with verified local contacts before production.
-        </p>
-      </section>
     </main>
   );
 }

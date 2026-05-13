@@ -12,9 +12,21 @@ class Admin(Base):
     __tablename__ = "admins"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    email = Column(String(150), unique=True, nullable=False, index=True)
+
+    email = Column(
+        String(150),
+        unique=True,
+        nullable=False,
+        index=True
+    )
+
     password_hash = Column(Text, nullable=False)
+
     role = Column(String(50), default="admin")
+
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    earthquake_alerts = relationship("EarthquakeAlert", back_populates="admin")
+    alerts = relationship(
+        "Alert",
+        back_populates="admin"
+    )

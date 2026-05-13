@@ -1,60 +1,93 @@
-let alarmAudio = null;
-let vibrationTimer = null;
-let alarmRunning = false;
+let audioContext = null;
+let alarmInterval = null;
+let activeOscillator = null;
+let activeGain = null;
 
-const VIBRATION_PATTERN = [500, 200, 500, 300, 900];
+function getAudioContext() {
+  if (!audioContext) {
+    const AudioContextClass =
+      window.AudioContext || window.webkitAudioContext;
 
-function createAlarmAudio() {
-  const audio = new Audio("/alarm.mp3");
-  audio.loop = true;
-  audio.volume = 1;
-  return audio;
+    if (!AudioContextClass) {
+      return null;
+    }
+
+    audioContext = new AudioContextClass();
+  }
+
+  return audioContext;
 }
 
-export function startVibration() {
-  if (!("vibrate" in navigator)) {
+function playBeep() {
+  const context = getAudioContext();
+
+  if (!context || context.state !== "running") {
     return;
   }
 
-  navigator.vibrate(VIBRATION_PATTERN);
+  const oscillator = context.createOscillator();
+  const gain = context.createGain();
 
-  if (vibrationTimer) {
-    clearInterval(vibrationTimer);
-  }
+  oscillator.type = "sine";
+  oscillator.frequency.setValueAtTime(880, context.currentTime);
+  oscillator.frequency.setValueAtTime(440, context.currentTime + 0.25);
 
-  vibrationTimer = setInterval(() => {
-    navigator.vibrate(VIBRATION_PATTERN);
-  }, 2500);
-}
+  gain.gain.setValueAtTime(0.001, context.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.6, context.currentTime + 0.05);
+  gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.5);
 
-export function stopVibration() {
-  if (vibrationTimer) {
-    clearInterval(vibrationTimer);
-    vibrationTimer = null;
-  }
+  oscillator.connect(gain);
+  gain.connect(context.destination);
 
-  if ("vibrate" in navigator) {
-    navigator.vibrate(0);
-  }
+  oscillator.start();
+  oscillator.stop(context.currentTime + 0.55);
+
+  activeOscillator = oscillator;
+  activeGain = gain;
 }
 
 export async function startEmergencyAlarm() {
-  startVibration();
-
-  if (!alarmAudio) {
-    alarmAudio = createAlarmAudio();
-  }
-
   try {
-    await alarmAudio.play();
-    alarmRunning = true;
+    const context = getAudioContext();
+
+    if (!context) {
+      return {
+        success: false,
+        autoplayBlocked: false,
+        error: "AudioContext is not supported"
+      };
+    }
+
+    if (context.state === "suspended") {
+      await context.resume();
+    }
+
+    if (context.state !== "running") {
+      return {
+        success: false,
+        autoplayBlocked: true
+      };
+    }
+
+    if (alarmInterval) {
+      return {
+        success: true,
+        autoplayBlocked: false
+      };
+    }
+
+    playBeep();
+
+    alarmInterval = setInterval(() => {
+      playBeep();
+    }, 900);
 
     return {
       success: true,
       autoplayBlocked: false
     };
   } catch (error) {
-    alarmRunning = true;
+    console.error("Alarm start failed:", error);
 
     return {
       success: false,
@@ -65,15 +98,28 @@ export async function startEmergencyAlarm() {
 }
 
 export function stopEmergencyAlarm() {
-  if (alarmAudio) {
-    alarmAudio.pause();
-    alarmAudio.currentTime = 0;
+  if (alarmInterval) {
+    clearInterval(alarmInterval);
+    alarmInterval = null;
   }
 
-  stopVibration();
-  alarmRunning = false;
-}
+  if (activeOscillator) {
+    try {
+      activeOscillator.stop();
+    } catch {
+      // oscillator may already be stopped
+    }
 
-export function isAlarmRunning() {
-  return alarmRunning;
+    activeOscillator = null;
+  }
+
+  if (activeGain) {
+    try {
+      activeGain.disconnect();
+    } catch {
+      // gain may already be disconnected
+    }
+
+    activeGain = null;
+  }
 }
