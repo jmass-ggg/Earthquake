@@ -26,15 +26,11 @@ class RiskLevel(str, enum.Enum):
     VERY_HIGH = "very_high"
     CRITICAL = "critical"
 
-
-
 class AlertStatus(str, enum.Enum):
     SAFE = "safe"
     WARNING = "warning"
     DANGER = "danger"
     EVACUATE = "evacuate"
-
-
 
 class Alert(Base):
     __tablename__ = "alerts"
@@ -57,7 +53,6 @@ class Alert(Base):
         Enum(RiskLevel),
         nullable=False
     )
-
 
     status = Column(
         Enum(AlertStatus),
