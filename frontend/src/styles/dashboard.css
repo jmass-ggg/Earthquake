@@ -449,7 +449,7 @@
 }
 
 .emergency-modal {
-  width: min(560px, 100%);
+  width: min(620px, 100%);
   padding: 30px;
   border-radius: 32px;
   background: #ffffff;
@@ -512,37 +512,55 @@
 
 .modal-actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
+.modal-actions--three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .safe-action-button,
+.not-safe-action-button,
 .help-action-button,
 .start-alarm-button {
   min-height: 54px;
   padding: 0 18px;
   border: 0;
   border-radius: 18px;
+  color: #ffffff;
   font-size: 0.98rem;
   font-weight: 950;
   cursor: pointer;
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
 }
 
 .safe-action-button:hover,
+.not-safe-action-button:hover,
 .help-action-button:hover,
 .start-alarm-button:hover {
   transform: translateY(-1px);
 }
 
+.safe-action-button:disabled,
+.not-safe-action-button:disabled,
+.help-action-button:disabled,
+.start-alarm-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+  transform: none;
+}
+
 .safe-action-button {
-  color: #ffffff;
   background: linear-gradient(135deg, #22c55e, #15803d);
   box-shadow: 0 14px 28px rgba(21, 128, 61, 0.2);
 }
 
+.not-safe-action-button {
+  background: linear-gradient(135deg, #f97316, #c2410c);
+  box-shadow: 0 14px 28px rgba(194, 65, 12, 0.22);
+}
+
 .help-action-button {
-  color: #ffffff;
   background: linear-gradient(135deg, #ef4444, #991b1b);
   box-shadow: 0 14px 28px rgba(153, 27, 27, 0.22);
 }
@@ -550,9 +568,25 @@
 .start-alarm-button {
   width: 100%;
   margin: 8px 0 2px;
-  color: #ffffff;
   background: linear-gradient(135deg, #f97316, #dc2626);
   box-shadow: 0 14px 28px rgba(220, 38, 38, 0.22);
+}
+
+.response-error {
+  margin: 10px 0 14px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  color: #991b1b;
+  background: #fee2e2;
+  font-size: 0.9rem;
+  font-weight: 850;
+}
+
+.response-loading {
+  margin: 14px 0 0;
+  color: #64748b;
+  font-size: 0.9rem;
+  font-weight: 800;
 }
 
 @keyframes modalEnter {
@@ -600,6 +634,10 @@
 
   .status-hero__meta {
     justify-content: flex-start;
+  }
+
+  .modal-actions--three {
+    grid-template-columns: 1fr;
   }
 }
 

@@ -1,12 +1,16 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from backend.api.auth_dependency import get_current_admin
+from backend.api.auth_dependency import get_current_admin, get_current_user
 from backend.database import get_db
 from backend.model.admin import Admin
 from backend.model.earthquake_alert import Alert
+from backend.model.user import User
 from backend.schema.alert_schema import EarthquakeAlertCreate, EarthquakeAlertResponse
+from backend.schema.user_response import EmergencyResponseCreate
+from backend.service.emergency_service import create_emergency_response
 from backend.websocket.manager import manager
+
 
 router = APIRouter(
     prefix="/ws",
@@ -72,3 +76,25 @@ async def send_alert(
         risk_level=alert.risk_level.value if hasattr(alert.risk_level, "value") else alert.risk_level,
         emergency=alert.emergency,
     )
+
+
+@router.post("/emergency/response")
+def submit_emergency_response(
+    payload: EmergencyResponseCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    try:
+        result = create_emergency_response(db, payload, current_user.id)
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=str(e),
+        )
+
+    return {
+        "status": "success",
+        "message": "Response recorded",
+        "data": result,
+    }

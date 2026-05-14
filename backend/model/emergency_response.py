@@ -15,7 +15,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from backend.database import Base
 
 
-class ResponseStatus(enum.Enum):
+class ResponseStatus(str, enum.Enum):
     SAFE = "safe"
     NOT_SAFE = "not_safe"
     NEED_HELP = "need_help"
@@ -43,7 +43,7 @@ class EmergencyResponse(Base):
     )
 
     response = Column(
-        Enum(ResponseStatus),
+        Enum(ResponseStatus, name="responsestatus"),
         nullable=False,
     )
 
@@ -53,12 +53,7 @@ class EmergencyResponse(Base):
     responded_at = Column(
         DateTime,
         default=datetime.utcnow,
+        nullable=False,
     )
 
-    __table_args__ = (
-        UniqueConstraint(
-            "alert_id",
-            "user_id",
-            name="uq_emergency_response_alert_user",
-        ),
-    )
+    

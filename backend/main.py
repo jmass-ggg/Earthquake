@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.api.auth import router as auth_router
 from backend.api.admin_alert_router import router as admin_alert_router
 from backend.api.websocket_router import router as websocket_router
-from backend.api.push_router import router as push_router
+# from backend.api.push_router import router as push_router
 from backend.api.emergency_response_router import router as emergency_response_router
 # from backend.api.notification import router as notification
 from backend.core.seed import seed_admin
@@ -68,7 +68,7 @@ def shutdown_event():
 
 
 app.include_router(auth_router)
-app.include_router(push_router)
+# app.include_router(push_router)
 app.include_router(admin_alert_router)
 app.include_router(websocket_router)
 app.include_router(emergency_response_router)

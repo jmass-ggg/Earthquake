@@ -4,8 +4,11 @@ import {
   startEmergencyAlarm,
   stopEmergencyAlarm
 } from "../services/emergencyAlarm.js";
-
+import { submitEmergencyResponse } from "../services/emergencyResponseApi.js";
 const ALERT_WS_URL = "ws://127.0.0.1:8000/ws/alerts";
+const API_BASE_URL = "http://127.0.0.1:8000";
+
+const STORED_ALERT_ID_KEY = "quakeguard_current_alert_id";
 
 const STATUS_CONFIG = {
   safe: {
@@ -14,7 +17,7 @@ const STATUS_CONFIG = {
     eyebrow: "Current Safety Status",
     icon: "🟢",
     badge: "Safe",
-    titleFallback: "Daily Safety Status",
+    titleFallback: "Daily Status",
     messageFallback: "No earthquake or disaster warning today."
   },
   warning: {
@@ -29,11 +32,11 @@ const STATUS_CONFIG = {
   danger: {
     label: "Emergency Active",
     subtitle: "High Risk Disaster Warning",
-    eyebrow: "Critical Alert Status",
+    eyebrow: "Emergency Alert Status",
     icon: "🔴",
     badge: "Emergency",
-    titleFallback: "Emergency Alert",
-    messageFallback: "Critical disaster warning. Move to a safe place immediately."
+    titleFallback: "Evacuation Alert",
+    messageFallback: "Critical earthquake risk. Evacuate immediately."
   }
 };
 
@@ -41,19 +44,11 @@ function getAlertMode(status, riskLevel, emergencyValue) {
   const normalizedStatus = String(status || "safe").toLowerCase();
   const normalizedRisk = String(riskLevel || "low").toLowerCase();
 
-  const isSafe =
-    normalizedStatus === "safe" &&
-    normalizedRisk === "low" &&
-    emergencyValue === false;
-
-  if (isSafe) return "safe";
-
-  if (normalizedStatus === "warning" || normalizedRisk === "medium") {
-    return "warning";
+  if (emergencyValue === true) {
+    return "danger";
   }
 
   if (
-    emergencyValue === true ||
     normalizedStatus === "danger" ||
     normalizedStatus === "evacuate" ||
     normalizedRisk === "high" ||
@@ -63,11 +58,191 @@ function getAlertMode(status, riskLevel, emergencyValue) {
     return "danger";
   }
 
+  if (
+    normalizedStatus === "warning" ||
+    normalizedRisk === "medium"
+  ) {
+    return "warning";
+  }
+
   return "safe";
 }
 
 function formatRiskLevel(value) {
-  return String(value || "LOW").replace("_", " ").toUpperCase();
+  return String(value || "LOW").replaceAll("_", " ").toUpperCase();
+}
+
+function getStoredAlertId() {
+  return localStorage.getItem(STORED_ALERT_ID_KEY);
+}
+
+function saveStoredAlertId(alertId) {
+  if (alertId) {
+    localStorage.setItem(STORED_ALERT_ID_KEY, alertId);
+  }
+}
+
+function clearStoredAlertId() {
+  localStorage.removeItem(STORED_ALERT_ID_KEY);
+}
+
+function looksLikeJwt(value) {
+  return (
+    typeof value === "string" &&
+    value.split(".").length === 3 &&
+    value.length > 40
+  );
+}
+
+function findTokenInsideObject(value) {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const possibleTokenKeys = [
+    "token",
+    "access_token",
+    "accessToken",
+    "authToken",
+    "auth_token",
+    "jwt",
+    "access"
+  ];
+
+  for (const key of possibleTokenKeys) {
+    if (looksLikeJwt(value[key]) || typeof value[key] === "string") {
+      return value[key];
+    }
+  }
+
+  for (const key of Object.keys(value)) {
+    const nestedToken = findTokenInsideObject(value[key]);
+
+    if (nestedToken) {
+      return nestedToken;
+    }
+  }
+
+  return null;
+}
+
+function getAuthToken() {
+  const directKeys = [
+    "token",
+    "access_token",
+    "accessToken",
+    "authToken",
+    "auth_token",
+    "jwt",
+    "quakeguard_token",
+    "quakeguard_access_token"
+  ];
+
+  for (const key of directKeys) {
+    const value = localStorage.getItem(key);
+
+    if (value) {
+      return value;
+    }
+  }
+
+  for (const key of Object.keys(localStorage)) {
+    const value = localStorage.getItem(key);
+
+    if (looksLikeJwt(value)) {
+      return value;
+    }
+
+    try {
+      const parsed = JSON.parse(value);
+      const token = findTokenInsideObject(parsed);
+
+      if (token) {
+        return token;
+      }
+    } catch {
+      // Ignore non-JSON localStorage values
+    }
+  }
+
+  return null;
+}
+
+function getCurrentLocation() {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) {
+      resolve({
+        latitude: null,
+        longitude: null
+      });
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude
+        });
+      },
+      () => {
+        resolve({
+          latitude: null,
+          longitude: null
+        });
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 5000,
+        maximumAge: 10000
+      }
+    );
+  });
+}
+
+async function submitEmergencyResponseToApi(alertId, responseType) {
+  const token = getAuthToken();
+
+  if (!token) {
+    throw new Error("Login token not found. Please login as a user again.");
+  }
+
+  if (!alertId) {
+    throw new Error("Alert ID not found. Send a new alert and try again.");
+  }
+
+  const location = await getCurrentLocation();
+
+  const payload = {
+    alert_id: alertId,
+    response: responseType,
+    latitude: location.latitude,
+    longitude: location.longitude
+  };
+
+  console.log("📤 Sending emergency response:", payload);
+
+  const res = await fetch(`${API_BASE_URL}/ws/emergency/response`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const data = await res.json().catch(() => null);
+
+  if (!res.ok) {
+    throw new Error(
+      data?.detail ||
+        data?.message ||
+        `Emergency response failed with status ${res.status}`
+    );
+  }
+
+  console.log("✅ Emergency response saved:", data);
+  return data;
 }
 
 function Dashboard() {
@@ -91,6 +266,9 @@ function Dashboard() {
   const [alertMode, setAlertMode] = useState("safe");
   const [alarmShouldPlay, setAlarmShouldPlay] = useState(false);
   const [alarmNeedsTap, setAlarmNeedsTap] = useState(false);
+  const [currentAlertId, setCurrentAlertId] = useState(getStoredAlertId());
+  const [responseSubmitting, setResponseSubmitting] = useState(false);
+  const [responseError, setResponseError] = useState("");
 
   const config = STATUS_CONFIG[alertMode];
 
@@ -123,12 +301,23 @@ function Dashboard() {
       setWsConnected(true);
     };
 
-    ws.onmessage = event => {
+    ws.onmessage = (event) => {
       console.log("📩 Raw WebSocket message:", event.data);
 
       try {
         const alertData = JSON.parse(event.data);
-        const backendEmergency = alertData.emergency === true;
+
+        const receivedAlertId =
+          alertData.id ||
+          alertData.alert_id ||
+          alertData.alertId;
+
+        console.log("🚨 Received alert ID:", receivedAlertId);
+
+        const backendEmergency =
+          alertData.emergency === true ||
+          alertData.type === "ALERT" ||
+          alertData.alarm === true;
 
         const mode = getAlertMode(
           alertData.status,
@@ -138,36 +327,38 @@ function Dashboard() {
 
         setAlertMode(mode);
 
-        setTitle(
-          alertData.title ||
-            STATUS_CONFIG[mode].titleFallback
-        );
-
-        setMessage(
-          alertData.message ||
-            STATUS_CONFIG[mode].messageFallback
-        );
-
+        setTitle(alertData.title || STATUS_CONFIG[mode].titleFallback);
+        setMessage(alertData.message || STATUS_CONFIG[mode].messageFallback);
         setMagnitude(alertData.magnitude ?? null);
         setRiskLevel(formatRiskLevel(alertData.risk_level || "low"));
+
+        if (receivedAlertId) {
+          setCurrentAlertId(receivedAlertId);
+          saveStoredAlertId(receivedAlertId);
+        }
+
+        setResponseError("");
 
         if (mode === "safe") {
           setEmergency(false);
           setUserStatus("SAFE");
           setShowEmergencyModal(false);
           setAlarmShouldPlay(false);
+          clearStoredAlertId();
+          setCurrentAlertId(null);
+          stopEmergencyAlarm();
         } else {
           setEmergency(true);
           setUserStatus("PENDING");
           setShowEmergencyModal(true);
-          setAlarmShouldPlay(backendEmergency);
+          setAlarmShouldPlay(alertData.alarm === true || backendEmergency);
         }
       } catch (error) {
         console.error("Invalid WebSocket JSON:", error);
       }
     };
 
-    ws.onerror = error => {
+    ws.onerror = (error) => {
       console.error("❌ WebSocket error:", error);
       setWsConnected(false);
     };
@@ -207,7 +398,27 @@ function Dashboard() {
     }
 
     controlAlarm();
+
+    return () => {
+      if (!alarmShouldPlay) {
+        stopEmergencyAlarm();
+      }
+    };
   }, [alarmShouldPlay]);
+
+  useEffect(() => {
+    function stopOnPageHide() {
+      stopEmergencyAlarm();
+    }
+
+    window.addEventListener("pagehide", stopOnPageHide);
+    window.addEventListener("beforeunload", stopOnPageHide);
+
+    return () => {
+      window.removeEventListener("pagehide", stopOnPageHide);
+      window.removeEventListener("beforeunload", stopOnPageHide);
+    };
+  }, []);
 
   async function handleStartAlarmTap() {
     const result = await startEmergencyAlarm();
@@ -217,19 +428,47 @@ function Dashboard() {
     }
   }
 
-  function handleSafeResponse() {
-    setUserStatus("SAFE");
-    setShowEmergencyModal(false);
-    setAlarmShouldPlay(false);
-    stopEmergencyAlarm();
-  }
+ async function handleEmergencyResponse(responseType) {
+  try {
+    setResponseSubmitting(true);
+    setResponseError("");
 
-  function handleNeedHelpResponse() {
-    setUserStatus("NEED_HELP");
+    await submitEmergencyResponse(currentAlertId, responseType);
+
+    if (responseType === "safe") {
+      setUserStatus("SAFE");
+    }
+
+    if (responseType === "not_safe") {
+      setUserStatus("NOT_SAFE");
+    }
+
+    if (responseType === "need_help") {
+      setUserStatus("NEED_HELP");
+    }
+
     setShowEmergencyModal(false);
     setAlarmShouldPlay(false);
     stopEmergencyAlarm();
+  } catch (error) {
+    console.error("Emergency response error:", error);
+    setResponseError(error.message || "Failed to submit response");
+  } finally {
+    setResponseSubmitting(false);
   }
+}
+
+function handleSafeResponse() {
+  handleEmergencyResponse("safe");
+}
+
+function handleNotSafeResponse() {
+  handleEmergencyResponse("not_safe");
+}
+
+function handleNeedHelpResponse() {
+  handleEmergencyResponse("need_help");
+}
 
   return (
     <main className={`dashboard dashboard--${alertMode}`}>
@@ -248,7 +487,11 @@ function Dashboard() {
           </div>
 
           <div className="status-hero__meta">
-            <span className={`connection-pill ${wsConnected ? "is-online" : "is-offline"}`}>
+            <span
+              className={`connection-pill ${
+                wsConnected ? "is-online" : "is-offline"
+              }`}
+            >
               <span />
               {wsConnected ? "Live connected" : "Disconnected"}
             </span>
@@ -348,7 +591,10 @@ function Dashboard() {
               </div>
             </a>
 
-            <a href="tel:015522295" className="contact-card contact-card--hospital">
+            <a
+              href="tel:015522295"
+              className="contact-card contact-card--hospital"
+            >
               <span>🏥</span>
               <div>
                 <p>Patan Hospital</p>
@@ -356,7 +602,10 @@ function Dashboard() {
               </div>
             </a>
 
-            <a href="tel:014221119" className="contact-card contact-card--hospital">
+            <a
+              href="tel:014221119"
+              className="contact-card contact-card--hospital"
+            >
               <span>🏥</span>
               <div>
                 <p>Bir Hospital</p>
@@ -365,9 +614,7 @@ function Dashboard() {
             </a>
           </div>
 
-          <p className="contacts-note">
-            Tap a card to call emergency services.
-          </p>
+          <p className="contacts-note">Tap a card to call emergency services.</p>
         </section>
       </section>
 
@@ -387,6 +634,7 @@ function Dashboard() {
             </p>
 
             <h2>{activeTitle}</h2>
+
             <p className="modal-message">{activeMessage}</p>
 
             <div className="modal-metrics">
@@ -415,23 +663,46 @@ function Dashboard() {
 
             <h3>Are you safe right now?</h3>
 
-            <div className="modal-actions">
+            {responseError && (
+              <p className="response-error">{responseError}</p>
+            )}
+
+            <div className="modal-actions modal-actions--three">
               <button
                 type="button"
                 className="safe-action-button"
                 onClick={handleSafeResponse}
+                disabled={responseSubmitting}
               >
                 I am Safe
               </button>
 
               <button
                 type="button"
+                className="not-safe-action-button"
+                onClick={handleNotSafeResponse}
+                disabled={responseSubmitting}
+              >
+                I'm Not Safe
+              </button>
+
+              <button
+                type="button"
                 className="help-action-button"
                 onClick={handleNeedHelpResponse}
+                disabled={responseSubmitting}
               >
                 I Need Help
               </button>
             </div>
+
+            {responseSubmitting && (
+              <p className="response-loading">Sending your response...</p>
+            )}
+
+            {currentAlertId && (
+              <p className="alert-id-note">Alert ID: {currentAlertId}</p>
+            )}
           </div>
         </section>
       )}
